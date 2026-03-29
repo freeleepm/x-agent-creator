@@ -1,5 +1,5 @@
 #!/bin/bash
-# x-agent-creator 核心创建脚本
+# x-agent-creator 核心创建脚本 v1.1.0
 # 用法：./create.sh <AGENT_NAME> <DESCRIPTION>
 
 set -e
@@ -27,10 +27,9 @@ infer_type() {
 
 AGENT_TYPE=$(infer_type "$DESCRIPTION")
 WORKSPACE_PATH="/root/.openclaw/workspace-${AGENT_NAME}"
-TEMPLATE_DIR="$(dirname "$0")/../templates"
 
 echo "============================================"
-echo "  x-agent-creator 创建中..."
+echo "  x-agent-creator v1.1.0 创建中..."
 echo "============================================"
 echo "名称：$AGENT_NAME"
 echo "类型：$AGENT_TYPE"
@@ -51,7 +50,7 @@ mkdir -p "$WORKSPACE_PATH"/{tasks/deliverables,memory,archives,temp}
 # 3. 生成 AGENTS.md 规范模板
 echo "[3/5] 注入规范模板..."
 cat > "$WORKSPACE_PATH/AGENTS.md" << 'AGENTS_EOF'
-# AGENTS.md - 标准化 Agent 规范
+# AGENTS.md - 标准化 Agent 规范 v1.1.0
 
 ## 🚨 铁律（任何任务都不能跳过）
 
@@ -101,7 +100,6 @@ cat > "$WORKSPACE_PATH/AGENTS.md" << 'AGENTS_EOF'
 - ❌ 不修改/删除他人文件
 - ❌ 不确认不执行删除、权限修改操作
 - ✅ 优先用 `trash`，不用 `rm`
-- ✅ 删除/权限/配置修改前必须先确认
 
 ---
 
@@ -121,12 +119,58 @@ cat > "$WORKSPACE_PATH/AGENTS.md" << 'AGENTS_EOF'
 
 ---
 
+## 🎯 智能调度决策 v1.1.0
+
+### 调度决策树
+
+```
+任务进来
+    │
+    ▼
+用户指定了 Agent？ ──► 直接 spawn（用户意图优先）
+    │
+    否
+    ▼
+主Agent快速判断：简单任务？
+    │
+    │（一句话能回答/不需要权限）
+    ├─► 是 → 主Agent直接处理
+    │
+    └─► 否（耗时较长）
+         ▼
+    需要权限（exec/fs）？
+         │
+         ├─► 是 → 有对应Agent？──► spawn
+         │               │
+         │               └─► 没有 → 自动创建临时Agent（用完关闭）
+         │
+         └─► 否 → 主Agent直接处理
+```
+
+### 简单任务判断标准
+
+| 简单（主Agent直接） | 复杂/耗时较长（spawn子Agent） |
+|:---------------------|:-------------------------------|
+| 一句话能回答 | 需要多步骤 |
+| 不需要执行命令 | 需要执行命令/写代码 |
+| 不需要查文件 | 需要读/写多个文件 |
+| 不需要搜索/分析 | 需要搜索/分析 |
+
+### 临时Agent自动创建规则
+
+当没有对应Agent但任务耗时较长时：
+- 自动创建临时Agent处理任务
+- 任务完成后临时Agent自动关闭
+- 产出物遵循"执行者创建原则"放在deliverables/
+
+---
+
 ## 💬 会话行为
 
 - 被直接提问/被要求时才回应
 - 群聊中质量 > 数量
-- 简单问题主 Agent 直接处理，复杂任务 spawn 子 Agent
-- 不确定时询问用户确认
+- 简单问题主Agent直接处理，复杂任务 spawn 子Agent
+- 用户意图优先，不二次确认打断节奏
 
 AGENTS_EOF
 
@@ -156,6 +200,7 @@ echo ""
 echo "Agent 名称：$AGENT_NAME"
 echo "Agent 类型：$AGENT_TYPE"
 echo "工作区路径：$WORKSPACE_PATH"
+echo "规范版本：v1.1.0"
 echo ""
 echo "下一步："
 echo "1. 修改 SOUL.md 定义 Agent 人格"
